@@ -1,0 +1,7 @@
+Convert PG Offline (.pg4) to mbox
+
+Usage: pgo2mbox.py filename.pg4
+
+Tested with the pg4 file in the sample directory (pg4 version 20).
+
+Screenshot: screenshot_1.png (grima_eowyn.pg4 converted and imported into Claws Mail)
