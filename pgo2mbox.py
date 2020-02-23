@@ -62,8 +62,8 @@ def group2mbox(conn,group_info,mbox,persons):
         mail.set_payload(ymessage[4])
 
         # Do we have an attachment for this message ?
-        attachments = conn.execute("SELECT * FROM attachment WHERE message_id = ?",(ymessage[1],)).fetchall()
-        logger.debug("Found %i attachment(s) for message_id %i",len(attachments),ymessage[1])
+        attachments = conn.execute("SELECT * FROM attachment WHERE message_id = ?",(ymessage[0],)).fetchall()
+        logger.debug("Found %i attachment(s) for message_id %i",len(attachments),ymessage[0])
     
         if len(attachments) > 0:
             mail.make_mixed()
@@ -98,7 +98,7 @@ def convertpgo(conn):
         except:
             logger.error('Failed to create mbox for group %s', group_name)
             continue
-        logger.debug('Created mbox file %s', group_name)
+        logger.debug('Created mbox file %s', group_name+'.mbox')
         try:
             group_mailbox.lock()
         except:
