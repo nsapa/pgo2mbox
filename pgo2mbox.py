@@ -12,8 +12,11 @@ import requests.exceptions
 import time
 import sys
 import unicodedata
+import email.message
 import sqlite3
 import mailbox
+from email.generator import BytesGenerator
+from email import policy
 
 __author__ = "Nicolas SAPA"
 __credits__ = ["Nicolas SAPA", "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"]
@@ -39,13 +42,12 @@ def group2mbox(conn,group_info,mbox,persons):
     logger.info('Found %i messages in group %s', len(ymessages), group_info[1])
 
     for ymessage in ymessages:
-        mail = mailbox.mboxMessage()
+        mail = email.message.EmailMessage()
         yfrom = return_pseudomail(persons[ymessage[5]-1])
         ydate = time.strptime(ymessage[2], "%Y-%m-%d %H:%M:%S")
         ydatetime = datetime.datetime.fromtimestamp(time.mktime(ydate))
         ysubject = ymessage[3]
         logger.debug("Message from %s sent %s subject: %s", yfrom,ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z"),ysubject)
-        mail.set_from(yfrom,ydate)
         mail['Subject'] = ymessage[3]
         mail['From'] = persons[ymessage[5]-1][1] + " <" + return_pseudomail(persons[ymessage[5]-1]) + ">"
         # Date: Tue, 18 Feb 2020 15:28:42 +0000
@@ -58,7 +60,22 @@ def group2mbox(conn,group_info,mbox,persons):
         if ymessage[1] != ymessage[6]:
             mail['In-Reply-To'] = '<' + group_info[1] + '_' + str(ymessage[6]) + '@yahoogroups.invalid>'
         mail.set_payload(ymessage[4])
-        mbox.add(mail)    
+
+        # Do we have an attachment for this message ?
+        attachments = conn.execute("SELECT * FROM attachment WHERE message_id = ?",(ymessage[1],)).fetchall()
+        logger.debug("Found %i attachment(s) for message_id %i",len(attachments),ymessage[1])
+    
+        if len(attachments) > 0:
+            mail.make_mixed()
+            for attachment in attachments:
+                attachname = attachment[3]
+                attachcontent = attachment[4]
+                logger.debug("Attachment: %s", attachname) 
+                mail.add_attachment(attachcontent, maintype='application', subtype='octet-stream', filename=attachname)
+
+        mboxmail = mailbox.mboxMessage(mail)
+        mboxmail.set_from(yfrom,ydate)
+        mbox.add(mboxmail)    
     
     return None
 
