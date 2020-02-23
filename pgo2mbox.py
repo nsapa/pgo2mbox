@@ -164,7 +164,8 @@ if __name__ == "__main__":
         logging.error("Cannot find %s", args.src_file)
         exit(1)
 
-    with Mkchdir(os.path.basename(source_file), False):
+
+    with Mkchdir(os.path.basename(source_file).replace('.','_'), False):
         log_file_handler = logging.FileHandler('pgo2mbox.log', 'a', 'utf-8')
         log_file_handler.setFormatter(log_formatter)
         root_logger.addHandler(log_file_handler)
