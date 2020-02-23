@@ -32,14 +32,14 @@ def return_pseudomail(person):
     value = re.sub(r'[^\w\s.-@]', '', value).strip().strip('.')
     value = re.sub(r'[-\s]+', '_', value)
     if len(value.split('@')) == 1:
-        value = value + '_m' + str(person[0]) + '@yahoogroups.invalid'
+        value = value + '_uid' + str(person[0]) + '@yahoogroups.invalid'
     return value
 
 def group2mbox(conn,group_info,mbox,persons):
     logger = logging.getLogger(name="group2mbox")
     ymessages = conn.execute('SELECT id,number,date,subject,content,person,topic_id,parent_id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
     ymessages = ymessages.fetchall()
-    logger.info('Found %i messages in group %s', len(ymessages), group_info[1])
+    logger.info('Found %i message(s) in group %s', len(ymessages), group_info[1])
 
     for ymessage in ymessages:
         mail = email.message.EmailMessage()
@@ -176,9 +176,9 @@ if __name__ == "__main__":
             logging.error("Cannot open %s as SQLite database", source_file)
             exit(1)
 
-        logging.info("Connected to the SQLite database %s, starting convertion",source_file)
+        logging.info("Connected to the SQLite database %s, starting conversion",source_file)
         convertpgo(conn)
 
-        logging.info("Convertion completed, closing database")
+        logging.info("Conversion completed, closing database")
         conn.close()
 
