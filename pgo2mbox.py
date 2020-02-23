@@ -33,9 +33,10 @@ def return_pseudomail(person):
     return value
 
 def group2mbox(conn,group_info,mbox,persons):
+    logger = logging.getLogger(name="group2mbox")
     ymessages = conn.execute('SELECT id,number,date,subject,content,person,topic_id,parent_id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
     ymessages = ymessages.fetchall()
-    logging.debug('Found %i messages in this group', len(ymessages))
+    logging.info('Found %i messages in group %s', len(ymessages), group_info[1])
 
     for ymessage in ymessages:
         mail = mailbox.mboxMessage()
@@ -62,6 +63,7 @@ def group2mbox(conn,group_info,mbox,persons):
     return None
 
 def convertpgo(conn):
+    logger = logging.getLogger(name="convertpgo")
     version = int(conn.execute("SELECT value FROM options WHERE key = 'database_version'").fetchone()[0])
     logging.debug("This PGO file is version %i",version)
 
@@ -83,7 +85,7 @@ def convertpgo(conn):
         try:
             group_mailbox.lock()
         except:
-            logging.error("Cannot lock the mbox, are you running this script twice? If not delete the .lock file and retry")
+            logging.error("Cannot lock the mbox, did this script crash during a conversion? If so delete the .lock file and retry")
             continue
         group2mbox(conn,group,group_mailbox,persons)
         group_mailbox.unlock()
@@ -159,6 +161,6 @@ if __name__ == "__main__":
         logging.info("Connected to the SQLite database %s, starting convertion",source_file)
         convertpgo(conn)
 
-        logging.debug("Conversion completed, closing database")
+        logging.info("Conversion completed, closing database")
         conn.close()
 
