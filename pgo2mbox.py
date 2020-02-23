@@ -16,7 +16,7 @@ import sqlite3
 import mailbox
 
 __author__ = "Nicolas SAPA"
-__credits__ = ["Nicolas SAPA"]
+__credits__ = ["Nicolas SAPA", "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"]
 __license__ = "CECILL-2.1"
 __version__ = "0.1"
 __maintainer__ = "Nicolas SAPA"
@@ -36,7 +36,7 @@ def group2mbox(conn,group_info,mbox,persons):
     logger = logging.getLogger(name="group2mbox")
     ymessages = conn.execute('SELECT id,number,date,subject,content,person,topic_id,parent_id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
     ymessages = ymessages.fetchall()
-    logging.info('Found %i messages in group %s', len(ymessages), group_info[1])
+    logger.info('Found %i messages in group %s', len(ymessages), group_info[1])
 
     for ymessage in ymessages:
         mail = mailbox.mboxMessage()
@@ -44,7 +44,7 @@ def group2mbox(conn,group_info,mbox,persons):
         ydate = time.strptime(ymessage[2], "%Y-%m-%d %H:%M:%S")
         ydatetime = datetime.datetime.fromtimestamp(time.mktime(ydate))
         ysubject = ymessage[3]
-        logging.debug("Message from %s sent %s subject: %s", yfrom,ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z"),ysubject)
+        logger.debug("Message from %s sent %s subject: %s", yfrom,ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z"),ysubject)
         mail.set_from(yfrom,ydate)
         mail['Subject'] = ymessage[3]
         mail['From'] = persons[ymessage[5]-1][1] + " <" + return_pseudomail(persons[ymessage[5]-1]) + ">"
@@ -65,13 +65,13 @@ def group2mbox(conn,group_info,mbox,persons):
 def convertpgo(conn):
     logger = logging.getLogger(name="convertpgo")
     version = int(conn.execute("SELECT value FROM options WHERE key = 'database_version'").fetchone()[0])
-    logging.debug("This PGO file is version %i",version)
+    logger.debug("This PGO file is version %i",version)
 
     persons = conn.execute('SELECT id,name,email FROM person ORDER BY id').fetchall()
-    logging.debug('Found %i person(s) in this file', len(persons))
+    logger.debug('Found %i person(s) in this file', len(persons))
 
     groups = conn.execute('SELECT id,name FROM discussion_group ORDER BY id').fetchall()
-    logging.debug('Found %i group(s) in this file', len(groups))
+    logger.debug('Found %i group(s) in this file', len(groups))
 
     for group in groups:
         group_id = group[0]
@@ -79,13 +79,13 @@ def convertpgo(conn):
         try:
             group_mailbox = mailbox.mbox(group_name+'.mbox', create=True)
         except:
-            logging.error('Failed to create mbox for group %s', group_name)
+            logger.error('Failed to create mbox for group %s', group_name)
             continue
-        logging.debug('Created mbox file %s', group_name)
+        logger.debug('Created mbox file %s', group_name)
         try:
             group_mailbox.lock()
         except:
-            logging.error("Cannot lock the mbox, did this script crash during a conversion? If so delete the .lock file and retry")
+            logger.error("Cannot lock the mbox, did this script crash during a conversion? If so delete the .lock file and retry")
             continue
         group2mbox(conn,group,group_mailbox,persons)
         group_mailbox.unlock()
@@ -161,6 +161,6 @@ if __name__ == "__main__":
         logging.info("Connected to the SQLite database %s, starting convertion",source_file)
         convertpgo(conn)
 
-        logging.info("Conversion completed, closing database")
+        logging.info("Convertion completed, closing database")
         conn.close()
 
