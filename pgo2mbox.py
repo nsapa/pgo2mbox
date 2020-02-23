@@ -33,7 +33,7 @@ def return_pseudomail(person):
     return value
 
 def group2mbox(conn,group_info,mbox,persons):
-    ymessages = conn.execute('SELECT id,number,date,subject,content,person,topic_id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
+    ymessages = conn.execute('SELECT id,number,date,subject,content,person,topic_id,parent_id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
     ymessages = ymessages.fetchall()
     logging.debug('Found %i messages in this group', len(ymessages))
 
@@ -43,7 +43,7 @@ def group2mbox(conn,group_info,mbox,persons):
         ydate = time.strptime(ymessage[2], "%Y-%m-%d %H:%M:%S")
         ydatetime = datetime.datetime.fromtimestamp(time.mktime(ydate))
         ysubject = ymessage[3]
-        logging.debug("Message from %s sent %s subject: %s", yfrom, ydate,ysubject)
+        logging.debug("Message from %s sent %s subject: %s", yfrom,ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z"),ysubject)
         mail.set_from(yfrom,ydate)
         mail['Subject'] = ymessage[3]
         mail['From'] = persons[ymessage[5]-1][1] + " <" + return_pseudomail(persons[ymessage[5]-1]) + ">"
@@ -51,6 +51,11 @@ def group2mbox(conn,group_info,mbox,persons):
         mail['Date'] = ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z")
         mail['To'] = group_info[1] + "@yahoogroups.invalid"
         mail["Content-Type"] = 'text/html; charset="utf-8"'
+        #Message-ID: <9ukpdj+v0gm@eGroups.com>
+        #In-Reply-To: <9ukhe1+390p@eGroups.com>
+        mail['Message-ID'] = '<' + group_info[1] + '_' + str(ymessage[1]) + '@yahoogroups.invalid>'
+        if ymessage[1] != ymessage[6]:
+            mail['In-Reply-To'] = '<' + group_info[1] + '_' + str(ymessage[6]) + '@yahoogroups.invalid>'
         mail.set_payload(ymessage[4])
         mbox.add(mail)    
     
@@ -70,7 +75,7 @@ def convertpgo(conn):
         group_id = group[0]
         group_name = group[1]
         try:
-            group_mailbox = mailbox.mbox(group_name, create=True)
+            group_mailbox = mailbox.mbox(group_name+'.mbox', create=True)
         except:
             logging.error('Failed to create mbox for group %s', group_name)
             continue
