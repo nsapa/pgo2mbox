@@ -37,19 +37,32 @@ def return_pseudomail(person):
 
 def group2mbox(conn,group_info,mbox,persons):
     logger = logging.getLogger(name="group2mbox")
-    ymessages = conn.execute('SELECT id,number,date,subject,content,person,topic_id,parent_id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
-    ymessages = ymessages.fetchall()
-    logger.info('Found %i message(s) in group %s', len(ymessages), group_info[1])
+    count_messages = conn.execute('SELECT id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
+    count_messages = count_messages.fetchall()
+    logger.info('Found %i message(s) in group %s', len(count_messages), group_info[1])
 
-    for ymessage in ymessages:
+    for id_to_get in count_messages:
+        # Get the content of the message
+        id_to_get = id_to_get[0]
+        ymessages = conn.execute('SELECT id,number,date,subject,content,person,topic_id,parent_id FROM group_message WHERE discussion_group = ? AND id = ? ORDER BY topic_id',(group_info[0],id_to_get))
+        ymessages = ymessages.fetchall()
+
+        # Sanity check
+        if len(ymessages) != 1:
+            # Should never happen!
+            logger.error("Trying to get content of message %s but got %i values! Database probably corrupted.",id_to_get,len(ymessages))
+            continue
+        ymessage = ymessages[0]
+        del ymessages
+
+        # Let's parse create the message object
         mail = email.message.EmailMessage()
         yfrom = return_pseudomail(persons[ymessage[5]-1])
         ydate = time.strptime(ymessage[2], "%Y-%m-%d %H:%M:%S")
         ydatetime = datetime.datetime.fromtimestamp(time.mktime(ydate))
         ysubject = ymessage[3]
-        logger.debug("Message from %s sent %s subject: %s", yfrom,ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z"),ysubject)
-        mail['Subject'] = ymessage[3]
-        mail['From'] = persons[ymessage[5]-1][1] + " <" + return_pseudomail(persons[ymessage[5]-1]) + ">"
+        mail['Subject'] = ysubject
+        mail['From'] = persons[ymessage[5]-1][1] + " <" + yfrom + ">"
         # Date: Tue, 18 Feb 2020 15:28:42 +0000
         mail['Date'] = ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z")
         mail['To'] = group_info[1] + "@yahoogroups.invalid"
@@ -60,6 +73,7 @@ def group2mbox(conn,group_info,mbox,persons):
         if ymessage[1] != ymessage[6]:
             mail['In-Reply-To'] = '<' + group_info[1] + '_' + str(ymessage[6]) + '@yahoogroups.invalid>'
         mail.set_payload(ymessage[4])
+        logger.debug('Created an EmailMessage for message %i; from %s with subject %s on %s', ymessage[1], yfrom, ysubject, ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z"))
 
         # Do we have an attachment for this message ?
         attachments = conn.execute("SELECT * FROM attachment WHERE message_id = ?",(ymessage[0],)).fetchall()
@@ -74,6 +88,8 @@ def group2mbox(conn,group_info,mbox,persons):
                 mail.add_attachment(attachcontent, maintype='application', subtype='octet-stream', filename=attachname)
 
         mboxmail = mailbox.mboxMessage(mail)
+        del mail
+
         mboxmail.set_from(yfrom,ydate)
         mbox.add(mboxmail)    
     
