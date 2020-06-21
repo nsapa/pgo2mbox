@@ -15,8 +15,7 @@ import unicodedata
 import email.message
 import sqlite3
 import mailbox
-from email.generator import BytesGenerator
-from email import policy
+
 
 __author__ = "Nicolas SAPA"
 __credits__ = ["Nicolas SAPA", "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"]
