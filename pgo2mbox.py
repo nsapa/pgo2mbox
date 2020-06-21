@@ -35,11 +35,28 @@ def return_pseudomail(person):
         value = value + '_uid' + str(person[0]) + '@yahoogroups.invalid'
     return value
 
-def group2mbox(conn,group_info,mbox,persons):
+def group2mbox(conn,group_info,persons):
     logger = logging.getLogger(name="group2mbox")
+    group_name = group_info[1]
     count_messages = conn.execute('SELECT id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
     count_messages = count_messages.fetchall()
-    logger.info('Found %i message(s) in group %s', len(count_messages), group_info[1])
+    logger.info('Found %i message(s) in group %s', len(count_messages), group_name)
+
+
+    # Creating the first mbox file
+    try:
+        mbox = mailbox.mbox(group_name+'.mbox', create=True)
+    except:
+        logger.error('Failed to create mbox for group %s', group_name)
+        return False
+    logger.debug('Created mbox file %s', group_name+'.mbox')
+    try:
+        mbox.lock()
+        current_mbox_number = 0
+        messsages_done = 0
+    except:
+        logger.error("Cannot lock the mbox, did this script crash during a conversion? If so delete the .lock file and retry")
+        return False
 
     for id_to_get in count_messages:
         # Get the content of the message
@@ -91,9 +108,13 @@ def group2mbox(conn,group_info,mbox,persons):
         del mail
 
         mboxmail.set_from(yfrom,ydate)
-        mbox.add(mboxmail)    
-    
-    return None
+        mbox.add(mboxmail)
+        messsages_done += 1    
+
+    mbox.flush() 
+    mbox.unlock()
+   
+    return True
 
 def convertpgo(conn):
     logger = logging.getLogger(name="convertpgo")
@@ -107,22 +128,10 @@ def convertpgo(conn):
     logger.debug('Found %i group(s) in this file', len(groups))
 
     for group in groups:
-        group_id = group[0]
-        group_name = group[1]
-        try:
-            group_mailbox = mailbox.mbox(group_name+'.mbox', create=True)
-        except:
-            logger.error('Failed to create mbox for group %s', group_name)
-            continue
-        logger.debug('Created mbox file %s', group_name+'.mbox')
-        try:
-            group_mailbox.lock()
-        except:
-            logger.error("Cannot lock the mbox, did this script crash during a conversion? If so delete the .lock file and retry")
-            continue
-        group2mbox(conn,group,group_mailbox,persons)
-        group_mailbox.unlock()
-        group_mailbox.flush() 
+        if(group2mbox(conn,group,persons)):
+            logger.info("Group %s have been successfully converted to mbox.", group[1])
+        
+
 
 class Mkchdir:
     d = ""
