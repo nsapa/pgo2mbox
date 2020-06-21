@@ -3,12 +3,9 @@
 import argparse
 import codecs
 import datetime
-import json
 import logging
-import math
 import os
 import re
-import requests.exceptions
 import time
 import sys
 import unicodedata
