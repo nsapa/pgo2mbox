@@ -35,7 +35,7 @@ def return_pseudomail(person):
         value = value + '_uid' + str(person[0]) + '@yahoogroups.invalid'
     return value
 
-def group2mbox(conn,group_info,persons):
+def group2mbox(group_info,persons):
     logger = logging.getLogger(name="group2mbox")
     group_name = group_info[1]
     count_messages = conn.execute('SELECT id FROM group_message WHERE discussion_group = ? ORDER BY topic_id',(group_info[0],))
@@ -53,7 +53,7 @@ def group2mbox(conn,group_info,persons):
     try:
         mbox.lock()
         current_mbox_number = 0
-        messsages_done = 0
+        messages_done = 0
     except:
         logger.error("Cannot lock the mbox, did this script crash during a conversion? If so delete the .lock file and retry")
         return False
@@ -109,14 +109,20 @@ def group2mbox(conn,group_info,persons):
 
         mboxmail.set_from(yfrom,ydate)
         mbox.add(mboxmail)
-        messsages_done += 1    
+
+        messages_done += 1  
+
+        if(never_flush == False):
+            if((messages_done % args.flush_after == 0)):
+                mbox.flush()
+                logger.info("%s messages converted, flushing mbox to disk",messages_done)
 
     mbox.flush() 
     mbox.unlock()
    
     return True
 
-def convertpgo(conn):
+def convertpgo():
     logger = logging.getLogger(name="convertpgo")
     version = int(conn.execute("SELECT value FROM options WHERE key = 'database_version'").fetchone()[0])
     logger.debug("This PGO file is version %i",version)
@@ -127,10 +133,15 @@ def convertpgo(conn):
     groups = conn.execute('SELECT id,name FROM discussion_group ORDER BY id').fetchall()
     logger.debug('Found %i group(s) in this file', len(groups))
 
+    convert_success = True
+
     for group in groups:
-        if(group2mbox(conn,group,persons)):
+        if(group2mbox(group,persons)):
             logger.info("Group %s have been successfully converted to mbox.", group[1])
-        
+        else:
+            convert_success = False
+
+    return convert_success
 
 
 class Mkchdir:
@@ -164,6 +175,9 @@ if __name__ == "__main__":
     p.add_argument('--verbose', action='store_true',
 		help='Enable debug output')
 
+    p.add_argument('--flush-after', type=int, default=500,
+		help='Flush to disk after this number of messages. Default is 500, -1 to disable flushing.')
+
     p.add_argument('src_file', type=str,
 		help='Filename of the PGOffline source file')
 
@@ -183,12 +197,21 @@ if __name__ == "__main__":
     log_stdout_handler.setFormatter(log_formatter)
     root_logger.addHandler(log_stdout_handler)
 
+    # Sanity checks
     try:
         source_file = os.path.realpath(args.src_file)
     except:
         logging.error("Cannot find %s", args.src_file)
         exit(1)
 
+    if(args.flush_after == 0):
+        logging.error("Argument --flush-after cannot be 0.")
+        exit(1)
+
+    never_flush = False
+    if(args.flush_after < 0):
+        logging.debug("Periodic flushing to disk disabled")
+        never_flush = True
 
     with Mkchdir(os.path.basename(source_file).replace('.','_'), False):
         log_file_handler = logging.FileHandler('pgo2mbox.log', 'a', 'utf-8')
@@ -202,8 +225,8 @@ if __name__ == "__main__":
             exit(1)
 
         logging.info("Connected to the SQLite database %s, starting conversion",source_file)
-        convertpgo(conn)
 
-        logging.info("Conversion completed, closing database")
+        if(convertpgo()):
+            logging.info("Conversion completed, closing database")
         conn.close()
 
