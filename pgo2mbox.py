@@ -255,6 +255,9 @@ if __name__ == "__main__":
         logging.info("Running under Python %i.%i.%i on %s %s",sys.version_info.major,sys.version_info.minor,sys.version_info.micro,platform.uname().system,platform.uname().release)
         logging.debug("Python version: %s", sys.version.strip('\n'))
 
+        if ((sys.version_info.major == 3) and (sys.version_info.minor < 7)):
+            logging.warn("Please upgrade to at least Python 3.7 because older versions have a known issue!")            
+
         # Log some config
         if(never_flush):
            logging.debug("Periodic flushing to disk disabled")
