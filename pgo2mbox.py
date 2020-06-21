@@ -8,6 +8,7 @@ import os
 import re
 import time
 import sys
+import platform
 import unicodedata
 import email.message
 import sqlite3
@@ -249,6 +250,10 @@ if __name__ == "__main__":
         log_file_handler = logging.FileHandler('pgo2mbox.log', 'a', 'utf-8')
         log_file_handler.setFormatter(log_formatter)
         root_logger.addHandler(log_file_handler)
+        logging.info("pgo2mailbox version %s by %s <%s>",__version__,__author__,__email__)
+        logging.info("This %s software is licensed under %s",__status__, __license__)
+        logging.info("Running under Python %i.%i.%i on %s %s",sys.version_info.major,sys.version_info.minor,sys.version_info.micro,platform.uname().system,platform.uname().release)
+        logging.debug("Python version: %s", sys.version.strip('\n'))
 
         # Log some config
         if(never_flush):
