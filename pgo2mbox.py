@@ -64,7 +64,7 @@ def group2mbox(group_info,persons):
         if len(ymessages) != 1:
             # Should never happen!
             logger.error("Trying to get content of message %s but got %i values! Database probably corrupted.",id_to_get,len(ymessages))
-            continue
+            return False
         ymessage = ymessages[0]
         del ymessages
 
@@ -97,7 +97,7 @@ def group2mbox(group_info,persons):
             for attachment in attachments:
                 attachname = attachment[3]
                 attachcontent = attachment[4]
-                logger.debug("Attachment: %s", attachname) 
+                logger.debug("Attachment id %i: name %s", attachment[0], attachname) 
                 mail.add_attachment(attachcontent, maintype='application', subtype='octet-stream', filename=attachname)
 
         mboxmail = mailbox.mboxMessage(mail)
@@ -112,7 +112,29 @@ def group2mbox(group_info,persons):
             if((messages_done % args.flush_after == 0)):
                 mbox.flush()
                 logger.info("%s messages converted, flushing mbox to disk",messages_done)
-
+                if(never_split == False):
+                    try:                    
+                        mbox_size = os.stat(mbox._file.name).st_size
+                    except:
+                        logging.error("Cannot obtain size of mbox file, something is really wrong here.")
+                        return False # Should really never happen       
+             
+                    logger.info("Current mbox is %s, size %i bytes", os.path.basename(mbox._file.name), mbox_size)
+                    if (mbox_size >= (args.max_size * 1024 * 1024)):
+                            current_mbox_number += 1
+                            new_mbox_name = group_name + '_' + str(current_mbox_number) + '.mbox'
+                            mbox.unlock()
+                            try:
+                                mbox = mailbox.mbox(new_mbox_name, create=True)
+                            except:
+                                logger.error('Creation of mbox %s failed.', new_mbox_name)
+                                return False
+                            logger.debug('Switching to new mbox file %s', new_mbox_name)
+                            try:
+                                mbox.lock()
+                            except:
+                                logger.error("Cannot lock the mbox %s", new_mbox_name)
+                                return False                       
     mbox.flush() 
     mbox.unlock()
    
@@ -174,6 +196,9 @@ if __name__ == "__main__":
     p.add_argument('--flush-after', type=int, default=500,
 		help='Flush to disk after this number of messages. Default is 500, -1 to disable flushing.')
 
+    p.add_argument('--max-size', type=int, default=-1,
+		help='Try to keep mbox near this size (in megabytes). Default is unlimited.')
+
     p.add_argument('src_file', type=str,
 		help='Filename of the PGOffline source file')
 
@@ -201,18 +226,38 @@ if __name__ == "__main__":
         exit(1)
 
     if(args.flush_after == 0):
-        logging.error("Argument --flush-after cannot be 0.")
+        logging.error("Argument --flush-after cannot be 0")
+        exit(1)
+
+    if(args.max_size == 0):
+        logging.error("Argument --max-size cannot be 0")
         exit(1)
 
     never_flush = False
     if(args.flush_after < 0):
-        logging.debug("Periodic flushing to disk disabled")
         never_flush = True
+
+    never_split = True
+    if(args.max_size > 0):
+        never_split = False
+
+    if ((never_flush == True) and (never_split == False)):
+        logging.error("Incompatible combinaison of --flush-after and --max-size: we check mbox size when we flush to disk") 
+        exit(1)
 
     with Mkchdir(os.path.basename(source_file).replace('.','_'), False):
         log_file_handler = logging.FileHandler('pgo2mbox.log', 'a', 'utf-8')
         log_file_handler.setFormatter(log_formatter)
         root_logger.addHandler(log_file_handler)
+
+        # Log some config
+        if(never_flush):
+           logging.debug("Periodic flushing to disk disabled")
+
+        if(never_split):
+           logging.debug("Spliting is disabled")
+        else:
+           logging.debug("Trying to keep max Mbox size near %i megabyte(s)",args.max_size)
 
         try:
             conn = sqlite3.connect(source_file)
