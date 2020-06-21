@@ -17,7 +17,7 @@ import mailbox
 __author__ = "Nicolas SAPA"
 __credits__ = ["Nicolas SAPA", "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"]
 __license__ = "CECILL-2.1"
-__version__ = "0.1"
+__version__ = "0.2"
 __maintainer__ = "Nicolas SAPA"
 __email__ = "nico@byme.at"
 __status__ = "Alpha"
@@ -253,6 +253,8 @@ if __name__ == "__main__":
         # Log some config
         if(never_flush):
            logging.debug("Periodic flushing to disk disabled")
+        else:
+           logging.debug("Flush after every %i message(s)",args.flush_after)
 
         if(never_split):
            logging.debug("Spliting is disabled")
