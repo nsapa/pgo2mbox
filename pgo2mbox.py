@@ -13,23 +13,23 @@ import unicodedata
 import email.message
 import sqlite3
 import mailbox
-
+import collections
 
 __author__ = "Nicolas SAPA"
 __credits__ = ["Nicolas SAPA", "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"]
 __license__ = "CECILL-2.1"
-__version__ = "0.2"
+__version__ = "0.3"
 __maintainer__ = "Nicolas SAPA"
 __email__ = "nico@byme.at"
 __status__ = "Alpha"
 
 def return_pseudomail(person):
-    value = str(person[2])
+    value = str(person[1])
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
     value = re.sub(r'[^\w\s.-@]', '', value).strip().strip('.')
     value = re.sub(r'[-\s]+', '_', value)
     if len(value.split('@')) == 1:
-        value = value + '_uid' + str(person[0]) + '@yahoogroups.invalid'
+        value = value + '_uid' + str(person[2]) + '@yahoogroups.invalid'
     return value
 
 def group2mbox(group_info,persons):
@@ -71,12 +71,18 @@ def group2mbox(group_info,persons):
 
         # Let's parse create the message object
         mail = email.message.EmailMessage()
-        yfrom = return_pseudomail(persons[ymessage[5]-1])
+
+        # This can fail ?!?
+        try:        
+            yfrom = return_pseudomail(persons[ymessage[5]])
+        except:
+            logger.error('return_pseudomail failed on index %i!', ymessage[5])
+            return False
         ydate = time.strptime(ymessage[2], "%Y-%m-%d %H:%M:%S")
         ydatetime = datetime.datetime.fromtimestamp(time.mktime(ydate))
         ysubject = ymessage[3]
         mail['Subject'] = ysubject
-        mail['From'] = persons[ymessage[5]-1][1] + " <" + yfrom + ">"
+        mail['From'] = persons[ymessage[5]][0] + " <" + yfrom + ">"
         # Date: Tue, 18 Feb 2020 15:28:42 +0000
         mail['Date'] = ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z")
         mail['To'] = group_info[1] + "@yahoogroups.invalid"
@@ -146,8 +152,13 @@ def convertpgo():
     version = int(conn.execute("SELECT value FROM options WHERE key = 'database_version'").fetchone()[0])
     logger.debug("This PGO file is version %i",version)
 
-    persons = conn.execute('SELECT id,name,email FROM person ORDER BY id').fetchall()
-    logger.debug('Found %i person(s) in this file', len(persons))
+    persons_raw = conn.execute('SELECT id,name,email FROM person ORDER BY id').fetchall()
+    logger.debug('Found %i person(s) in this file', len(persons_raw))
+    persons = collections.defaultdict(int)
+    for person in persons_raw:
+        # persons contains (name,email,id)
+        persons[person[0]] = (person[1], person[2],person[0])
+    del persons_raw
 
     groups = conn.execute('SELECT id,name FROM discussion_group ORDER BY id').fetchall()
     logger.debug('Found %i group(s) in this file', len(groups))
