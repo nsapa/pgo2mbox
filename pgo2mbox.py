@@ -11,9 +11,11 @@ import sys
 import platform
 import unicodedata
 import email.message
+import email.header
 import sqlite3
 import mailbox
 import collections
+import hashlib
 
 __author__ = "Nicolas SAPA"
 __credits__ = ["Nicolas SAPA", "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"]
@@ -31,6 +33,21 @@ def return_pseudomail(person):
     if len(value.split('@')) == 1:
         value = value + '_uid' + str(person[2]) + '@yahoogroups.invalid'
     return value
+
+def return_subject(ysubject):
+    logger = logging.getLogger(name="return_subject")
+
+    try:
+        tsubject = email.header.Header(ysubject,'utf-8')
+    except:
+        logger.error('Failed to sanitize subject, generating a fake subject') # We failed to generate a valid header value so tell the user
+        fake_subject = "<pgo2mbox> fake subject {}".format(hashlib.md5(ysubject.encode()).hexdigest())
+        tsubject = email.header.Header(fake_subject,'utf-8')
+   
+    subject = tsubject.encode('utf-8')
+    subject = re.sub(r'\r?\n','_', subject) #Subject cannot contain newline
+
+    return subject
 
 def group2mbox(group_info,persons):
     logger = logging.getLogger(name="group2mbox")
@@ -72,7 +89,7 @@ def group2mbox(group_info,persons):
         # Let's parse create the message object
         mail = email.message.EmailMessage()
 
-        # This can fail ?!?
+        # Sanity check
         try:        
             yfrom = return_pseudomail(persons[ymessage[5]])
         except:
@@ -80,7 +97,8 @@ def group2mbox(group_info,persons):
             return False
         ydate = time.strptime(ymessage[2], "%Y-%m-%d %H:%M:%S")
         ydatetime = datetime.datetime.fromtimestamp(time.mktime(ydate))
-        ysubject = ymessage[3]
+        ysubject = return_subject(ymessage[3])
+
         mail['Subject'] = ysubject
         mail['From'] = persons[ymessage[5]][0] + " <" + yfrom + ">"
         # Date: Tue, 18 Feb 2020 15:28:42 +0000
