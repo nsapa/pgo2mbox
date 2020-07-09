@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# coding: utf8
 
 import argparse
 import codecs
@@ -41,15 +42,31 @@ def return_pseudomail(person):
     return value
 
 
+def return_yfrom(yname, yaddr):
+    logger = logging.getLogger(name="return_from")
+
+    try:
+        tfrom = email.header.Header(yname + ' <' + yaddr + '>', 'utf-8')
+    except:
+        logger.error(
+            'Failed to sanitize sender, keeping only the email address.')
+        fake_from = "<{}>".format(yaddr)
+        tfrom = email.header.Header(fake_from, 'utf-8')
+
+    yfrom = tfrom.encode('utf-8')
+    yfrom = re.sub(r'\r?\n', '_', yfrom)
+
+    return yfrom
+
+
 def return_subject(ysubject):
     logger = logging.getLogger(name="return_subject")
 
     try:
         tsubject = email.header.Header(ysubject, 'utf-8')
     except:
-        logger.error(
-            'Failed to sanitize subject, generating a fake subject'
-        )  # We failed to generate a valid header value so tell the user
+        # We failed to generate a valid header value so tell the user
+        logger.error('Failed to sanitize subject, generating a fake subject')
         fake_subject = "<pgo2mbox> fake subject {}".format(
             hashlib.md5(ysubject.encode()).hexdigest())
         tsubject = email.header.Header(fake_subject, 'utf-8')
@@ -108,6 +125,7 @@ def group2mbox(group_info, persons):
         # Let's parse create the message object
         mail = email.message.EmailMessage()
 
+        #logger.debug('Working on message_id %i',ymessage[0])
         # Sanity check
         try:
             yfrom = return_pseudomail(persons[ymessage[5]])
@@ -119,7 +137,7 @@ def group2mbox(group_info, persons):
         ysubject = return_subject(ymessage[3])
 
         mail['Subject'] = ysubject
-        mail['From'] = persons[ymessage[5]][0] + " <" + yfrom + ">"
+        mail['From'] = return_yfrom(persons[ymessage[5]][0], yfrom)
         # Date: Tue, 18 Feb 2020 15:28:42 +0000
         mail['Date'] = ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z")
         mail['To'] = group_info[1] + "@yahoogroups.invalid"
