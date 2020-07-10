@@ -20,7 +20,7 @@ import hashlib
 
 __author__ = "Nicolas SAPA"
 __credits__ = [
-    "Doranwen for her many bugs report",
+    "Doranwen for her many bug reports",
     "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"
 ]
 __license__ = "CECILL-2.1"
