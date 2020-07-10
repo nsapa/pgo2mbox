@@ -31,11 +31,15 @@ __status__ = "Beta"
 
 
 def return_pseudomail(person):
+    # FIXME rewrite this function with something using email.utils.parseaddr()
     value = str(person[1])
     value = unicodedata.normalize('NFKD',
                                   value).encode('ascii',
                                                 'ignore').decode('ascii')
-    value = re.sub(r'[^\w\s.-@]', '', value).strip().strip('.')
+    # Try to have a valid email addr
+    value = re.sub(r'[^\w\s.-@]', '',
+                   value).strip().strip('.').replace('<', '').replace('>', '')
+    # Replace any kind of space to '_'
     value = re.sub(r'[-\s]+', '_', value)
     if len(value.split('@')) == 1:
         value = value + '_uid' + str(person[2]) + '@yahoogroups.invalid'
@@ -43,7 +47,7 @@ def return_pseudomail(person):
 
 
 def return_yfrom(yname, yaddr):
-    logger = logging.getLogger(name="return_from")
+    logger = logging.getLogger(name="return_yfrom")
 
     try:
         tfrom = email.header.Header(yname + ' <' + yaddr + '>', 'utf-8')
