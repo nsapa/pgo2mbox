@@ -20,11 +20,11 @@ import hashlib
 
 __author__ = "Nicolas SAPA"
 __credits__ = [
-    "Nicolas SAPA",
+    "Doranwen for her many bugs report",
     "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"
 ]
 __license__ = "CECILL-2.1"
-__version__ = "0.4"
+__version__ = "0.5"
 __maintainer__ = "Nicolas SAPA"
 __email__ = "nico@byme.at"
 __status__ = "Beta"
