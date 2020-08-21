@@ -24,10 +24,11 @@ __credits__ = [
     "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"
 ]
 __license__ = "CECILL-2.1"
-__version__ = "0.5"
+__version__ = "0.5.1"
 __maintainer__ = "Nicolas SAPA"
 __email__ = "nico@byme.at"
 __status__ = "Beta"
+__repositery__ = "https://github.com/nsapa/pgo2mbox/"
 
 
 def return_pseudomail(person):
@@ -50,7 +51,8 @@ def return_yfrom(yname, yaddr):
     logger = logging.getLogger(name="return_yfrom")
 
     try:
-        tfrom = email.header.Header(yname + ' <' + yaddr + '>', 'utf-8')
+        # From: "Someone with strange symbols" <mailbox@example.com>
+        tfrom = email.header.Header('"' + yname + '" <' + yaddr + '>', 'utf-8')
     except:
         logger.error(
             'Failed to sanitize sender, keeping only the email address.')
@@ -141,7 +143,15 @@ def group2mbox(group_info, persons):
         ysubject = return_subject(ymessage[3])
 
         mail['Subject'] = ysubject
-        mail['From'] = return_yfrom(persons[ymessage[5]][0], yfrom)
+        try:
+            # Lots of issue in the email lib, so failsafe here
+            mail['From'] = return_yfrom(persons[ymessage[5]][0], yfrom)
+        except:
+            logger.error(
+                "Failed to add the From header for person %i, retrying with only the email address",
+                ymessage[5])
+            logger.info("Please create an issue on %s", __repositery__)
+            mail['From'] = yfrom
         # Date: Tue, 18 Feb 2020 15:28:42 +0000
         mail['Date'] = ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z")
         mail['To'] = group_info[1] + "@yahoogroups.invalid"
