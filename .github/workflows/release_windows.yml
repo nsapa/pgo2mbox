@@ -34,7 +34,11 @@ jobs:
       shell: bash
 
     - name: generating the release zip
-      run: 7z a pgo2mbox_Windows_${{ steps.get_version.outputs.VERSION }}.zip build/*
+      run: |
+            copy LICENSE build/
+            cd build
+            7z a ../pgo2mbox_Windows_${{ steps.get_version.outputs.VERSION }}.zip .
+            cd ..
 
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:

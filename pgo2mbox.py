@@ -24,7 +24,7 @@ __credits__ = [
     "Authors of https://github.com/IgnoredAmbience/yahoo-group-archiver"
 ]
 __license__ = "CECILL-2.1"
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 __maintainer__ = "Nicolas SAPA"
 __email__ = "nico@byme.at"
 __status__ = "Beta"
