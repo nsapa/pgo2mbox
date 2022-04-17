@@ -156,6 +156,10 @@ def group2mbox(group_info, persons):
         mail['Date'] = ydatetime.strftime("%a, %d %b %Y %H:%M:%S %z")
         mail['To'] = group_info[1] + "@yahoogroups.invalid"
         mail["Content-Type"] = 'text/html; charset="utf-8"'
+        mail["X-Converted-By"] = 'pgo2mbox/' + __version__
+        mail["X-Converted-From"] = "file: " + os.path.basename(
+            source_file) + ", group: " + group_name + ", message: " + str(
+                ymessage[0])
         #Message-ID: <9ukpdj+v0gm@eGroups.com>
         #In-Reply-To: <9ukhe1+390p@eGroups.com>
         mail['Message-ID'] = '<' + group_info[1] + '_' + str(
