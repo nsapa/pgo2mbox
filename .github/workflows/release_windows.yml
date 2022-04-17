@@ -1,0 +1,44 @@
+name: "Build the Windows release"
+
+on:
+  push:
+    tags:
+      - "v*"
+
+  workflow_dispatch:
+    reason:
+        description: "Why are you forcing a run?"
+        required: true
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: update pip
+      run: python -m pip install -U pip
+
+    - name: install pip prereq
+      run: python -m pip install -U cx_Freeze 
+
+    - name: build the executable
+      run: python win32_build.py build_exe --include-msvcr=True --build-exe=build
+
+    - name: get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      shell: bash
+
+    - name: generating the release zip
+      run: 7z a pgo2mbox_Windows_${{ steps.get_version.outputs.VERSION }}.zip build/*
+
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+            repo_token: "${{ secrets.GITHUB_TOKEN }}"
+            prerelease: false
+            files: pgo2mbox_Windows_${{ steps.get_version.outputs.VERSION }}.zip
+            
