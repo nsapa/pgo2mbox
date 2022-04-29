@@ -7,9 +7,6 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-    reason:
-        description: "Why are you forcing a run?"
-        required: true
 
 jobs:
   windows-ci:

@@ -6,9 +6,6 @@ on:
       - "v*"
 
   workflow_dispatch:
-    reason:
-        description: "Why are you forcing a run?"
-        required: true
 
 jobs:
   windows-release:
