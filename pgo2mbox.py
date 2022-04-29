@@ -346,8 +346,12 @@ if __name__ == "__main__":
 
     # Sanity checks
     try:
-        source_file = os.path.realpath(args.src_file, strict=True)
+        source_file = os.path.realpath(args.src_file)
     except:
+        logging.error("Cannot normalize %s", args.src_file)
+        exit(1)
+
+    if (os.path.exists(source_file) == False):
         logging.error("Cannot find %s", args.src_file)
         exit(1)
 
