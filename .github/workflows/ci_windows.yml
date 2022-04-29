@@ -39,6 +39,7 @@ jobs:
             copy LICENSE build/
             cd build
             cmd /c "del /f /s /q lib\test"
+            cmd /c "del /f /s /q lib\distutils\command"
             cd ..
 
     - name: upload built executable

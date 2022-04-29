@@ -35,6 +35,7 @@ jobs:
             copy LICENSE build/
             cd build
             cmd /c "del /f /s /q lib\test"
+            cmd /c "del /f /s /q lib\distutils\command"
             7z a ../pgo2mbox_Windows_${{ steps.get_version.outputs.VERSION }}.zip .
             cd ..
 
